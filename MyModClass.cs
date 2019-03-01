@@ -28,7 +28,7 @@ namespace MyCustomWeapon
         #region Mod Information
         //Named defined in assembly (Project>ProjectName Properties>Application>Assembly Name)
 
-        public string Creator = "theCH33F", Version = "V1.2.0"; //V1.0.0 -> Major.Minor.Maintenance[Build]
+        public string Creator = "theCH33F", Version = "V2.0.0"; //V1.0.0 -> Major.Minor.Maintenance[Build]
         public string Description = "Thors Hammer! Complete with Recall functionality. Use the gesture when holding to claim a hammer, then use gesture to recall.";
 
         //This information is displayed in-game.
@@ -58,24 +58,6 @@ namespace MyCustomWeapon
             Debug.Log(m + " has finished setting up...");
         }
 
-        /*
-        public void OnInit()
-        {
-            Debug.Log("Loading Mjolnir through OnInit");
-            reff = this;
-
-            //This is called when the game starts.
-
-            // ModUtilities.ClearConfig (c,m); //Remove comments this then build to clear the config(Then remove or comment this line), or manually clear it.
-            ModUtilities.CreateConfig(c, m);
-
-            SetUpConfig();
-
-            Debug.Log("Loading model...");
-            ModUtilities.toInvokeOn.StartCoroutine(ModUtilities.LoadModelFromSource(m, bundleName, modelName, OnModelLoaded));
-            Debug.Log(m + " has finished setting up...");
-        }
-        */
 
         private void OnModelLoaded(GameObject args)
         {
@@ -112,10 +94,11 @@ namespace MyCustomWeapon
 
         public void OnEnemySetUp(EnemySetupInfo esi)
         {
+            Debug.Log("Setup has been called");
             if (spawnInstance == null)
             { 
                 WeaponChance weapon = ModUtilities.GetWeaponFromList(thisWeapon);
-                spawnInstance = UnityEngine.Object.Instantiate(weapon.weapon, Player.reff.position + new Vector3(0, 5, 5), Player.reff.handLeft.transform.rotation);
+                spawnInstance = UnityEngine.Object.Instantiate(weapon.weapon, GameController.Player.position + new Vector3(0, 5, 5), GameController.Player.handLeft.transform.rotation);
                 spawnInstance.AddComponent<MyWeaponSetUp>().SetUp(weapon, canRecall);
                 Debug.Log(m + " has spawned.");
             }
@@ -207,10 +190,10 @@ namespace MyCustomWeapon
     public class MjolnirHandle : WeaponHandle
     {
         static MjolnirHandle currentMjol;
-        Vector3 handRightPos;
+        Vector3 handPos;
         Rigidbody rb;
 
-        public MjolnirHandle() : base()
+        protected void Start()
         {
             rb = GetComponent<Rigidbody>();
         }
@@ -231,8 +214,8 @@ namespace MyCustomWeapon
 
                 if (currentMjol.Equals(this))
                 {
-                    handRightPos = Player.reff.leftArmPos;
-                    currentMjol.rb.velocity = (handRightPos - rb.position) * 5;
+                    handPos = GameController.Player.leftArmPos;
+                    currentMjol.rb.velocity = (handPos - rb.position) * 5;
 
                 }
             }
@@ -243,8 +226,8 @@ namespace MyCustomWeapon
 
                 if (currentMjol.Equals(this))
                 {
-                    handRightPos = Player.reff.rightArmPos;
-                    currentMjol.rb.velocity = (handRightPos - rb.position) * 5;
+                    handPos = GameController.Player.rightArmPos;
+                    currentMjol.rb.velocity = (handPos - rb.position) * 5;
 
                 }
             }
@@ -259,9 +242,10 @@ namespace MyCustomWeapon
 
         public void SetUp(WeaponChance weapon, bool canRecall)
         {
-            gameObject.AddComponent<WeaponBase>().type = (WeaponType)weapon.weaponType;
+            gameObject.AddComponent<WeaponBase>().type = WeaponType.ArmorBreaker;
 
             WeaponBase wb = GetComponent<WeaponBase>();
+            //wb.type = WeaponType.ArmorBreaker;
 
             blade = transform.GetChild(0).gameObject;
             handle = transform.GetChild(1).gameObject;
