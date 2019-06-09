@@ -1,238 +1,93 @@
-﻿using MemeLoader;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
+﻿using System;
+using LoaderExtras;
+using MemeLoader.ModUtilities;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using Harmony;
 
-/*______________________Info_________________________
- * Template provided by: MemeMan (MemeLoader creator).
- * 
- * Supports: MemeLoader V0.5.0
- * --------------------------------------------------
- * 
- * ____________________________________________Help!____________________________________________________________________________________________
- * See: Modding: How to | Modding: video guide in your template project for more help, or ask on the Discord! | Below to the `Error Help` region.
- * --------------------------------------------------------------------------------------------------------------------------------------------
- * */
 
-namespace MyCustomWeapon
+#region ERROR HELP
+/* Q: I can't use any of Gorn's classes??
+* -
+* A: You need to add a reference to Gorn's assemblies, do so via:
+* 
+* View>Solution Explorer>Right-Click References>Add Reference>Browse>Navigate to Gorn's folder>Gorn_Data>Managed and from here add whatever you need.
+* --
+* Q: My mod won't load!
+* -
+* A: Have you filled out your ModInformation property? If so, check the CMD window when Gorn launches and look at the error, it'll tell you where the issue is occuring.
+* ---
+* Q: Gorn keeps saying NullReferenceException!!
+* -
+* A: 
+* 
+* Are you setting your variables inside the class deriving from IMod? Create a new class and derive it from MonoBehaviour or whatever.
+* Don't use the entry class as the logic holder for your mod, it's supposed to be an overseer for your mod, creating/removing instances of your mod or initializing them.
+* ----
+* Q: Where's Harmony?
+* -
+* A: Add a reference to it, it's located where the MemeLauncher is installed.
+*/
+#endregion
+
+namespace MyModNameSpace
 {
-
-    public class MyCustomWeaponManager
+    public class MyModEntry : IMod //Only have one class derive from this, it's an entry point.
     {
-
-        #region Mod Information
-        //Named defined in assembly (Project>ProjectName Properties>Application>Assembly Name)
-
-        public string Creator = "theCH33F", Version = "V2.0.0"; //V1.0.0 -> Major.Minor.Maintenance[Build]
-        public string Description = "Thors Hammer! Complete with Recall functionality. Use the gesture when holding to claim a hammer, then use gesture to recall.";
-
-        //This information is displayed in-game.
+        #region variables
+        public static MyModEntry reff;
+        public static GameObject weaponPrefab;
+        private int r = 0;
+        //GameObject spawnInstance = null;
         #endregion
 
-        //c = Configuration File Name, m = Mod Name, a = AssetBundle name with extension
-        public static string c = "WeaponConfiguration", m = "Mjolnir", a = "mjolnir.weapon"; // Change m and a to the corresponding names.
 
-        #region IGNORE 
-        WeaponChance thisWeapon = null;
-        GameObject spawnInstance = null;
-
-        public void Init()
+        public void OnLoaded()
         {
+            //This is called when the mods are loaded, use as an initializer.
+            Console.WriteLine($"Hello, world! Calling from {ModInformation.Name}!!");
+
             Debug.Log("Loading Mjolnir through Init");
             reff = this;
 
             //This is called when the game starts.
-
-            // ModUtilities.ClearConfig (c,m); //Remove comments this then build to clear the config(Then remove or comment this line), or manually clear it.
-            ModUtilities.CreateConfig(c, m);
-
-            SetUpConfig();
-
             Debug.Log("Loading model...");
-            ModUtilities.toInvokeOn.StartCoroutine(ModUtilities.LoadModelFromSource(m, bundleName, modelName, OnModelLoaded));
-            Debug.Log(m + " has finished setting up...");
-        }
-
-
-        private void OnModelLoaded(GameObject args)
-        {
-            weaponPrefab = args;
-
-            thisWeapon = new WeaponChance(weaponPrefab, 100, new bool[]
- {
-                canPary,
-                canBeParried,
-                stickOnDamage,
-                hideHandOnGrab,
-                isCurrentlyGrabbable,
-                setPositionOnGrab,
-                setRotationOnGrab,
-                canAlsoCut,
-                isDamaging
- }, new float[]
- {
-                impaleZDamper,
-                connectedBMass,
-                impaleBreakForce,
-                scaleDamage,
-                bonusVelocity,
-                impaleDepth,
-                damageType,
-                weaponType,
-                addForceToRigidbodyFactor
- });
-
-            ModUtilities.toInvokeOn.AddWeaponToList(thisWeapon);
-
-            Debug.Log(args.name + " has loaded.");
-        }
-
-        public void OnEnemySetUp(EnemySetupInfo esi)
-        {
-            Debug.Log("Setup has been called");
-            if (spawnInstance == null)
-            { 
-                WeaponChance weapon = ModUtilities.GetWeaponFromList(thisWeapon);
-                spawnInstance = UnityEngine.Object.Instantiate(weapon.weapon, GameController.Player.position + new Vector3(0, 5, 5), GameController.Player.handLeft.transform.rotation);
-                spawnInstance.AddComponent<MyWeaponSetUp>().SetUp(weapon, canRecall);
-                Debug.Log(m + " has spawned.");
-            }
-        }
-
-        private void SetUpConfig()
-        {
-            Debug.Log("Starting config");
-
-            try
+            ModUtilities.LoadAssetBundle("/models/mjolnir.weapon", bundle =>
             {
-                ModUtilities.AddKeyToConfig(c, m, "[REQUIRED]", "WeaponObjectName = Name goes here");
-                ModUtilities.AddKeyToConfig(c, m, "[REQUIRED]", "AssetBundleName = " + a);
-                ModUtilities.AddKeyToConfig(c, m, "[SPACE]", "");
-
-                #region ints
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "DamageType = 1");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "WeaponType = 1");
-                ModUtilities.AddKeyToConfig(c, m, "[SPACE]", "");
-                #endregion
-
-                #region floats
-               // ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "SpawnChance = 25");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "ScaleDamage = 1.2");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "BonusVelocity = 0.7");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "ImpaleDepth = 1");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "ImpaleZDamper = 25");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "ImpaledConnectedBodyMassScale = 10");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "ImpaledBreakForce = 5000");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "AddForceToRigidbodyFactor = 0.6");
-                #endregion
-
-                #region bools
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "CanPary = true");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "CanBeParried = true");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "StickOnDamage = false");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "HideHandOnGrab = true");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "IsCurrentlyGrabbable = true");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "SetPositionOnGrab = true");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "SetRotationOnGrab = true");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "CanAlsoCut = true");
-                ModUtilities.AddKeyToConfig(c, m, "[OPTION]", "IsDamaging = true");
-                #endregion
-
-                modelName = (string)ModUtilities.GetKeyFromConfig(c, m, "WeaponObjectName");
-                bundleName = (string)ModUtilities.GetKeyFromConfig(c, m, "AssetBundleName");
-
-                canPary = (bool)ModUtilities.GetKeyFromConfig(c, m, "CanPary");
-                canBeParried = (bool)ModUtilities.GetKeyFromConfig(c, m, "CanBeParried");
-                stickOnDamage = (bool)ModUtilities.GetKeyFromConfig(c, m, "StickOnDamage");
-                hideHandOnGrab = (bool)ModUtilities.GetKeyFromConfig(c, m, "HideHandOnGrab");
-                isCurrentlyGrabbable = (bool)ModUtilities.GetKeyFromConfig(c, m, "IsCurrentlyGrabbable");
-                setPositionOnGrab = (bool)ModUtilities.GetKeyFromConfig(c, m, "SetPositionOnGrab");
-                setRotationOnGrab = (bool)ModUtilities.GetKeyFromConfig(c, m, "SetRotationOnGrab");
-                canAlsoCut = (bool)ModUtilities.GetKeyFromConfig(c, m, "CanAlsoCut");
-                isDamaging = (bool)ModUtilities.GetKeyFromConfig(c, m, "IsDamaging");
-
-                //spawnChance = (float)ModUtilities.GetKeyFromConfig(c, m, "SpawnChance");
-                scaleDamage = (float)ModUtilities.GetKeyFromConfig(c, m, "ScaleDamage");
-                bonusVelocity = (float)ModUtilities.GetKeyFromConfig(c, m, "BonusVelocity");
-                impaleDepth = (float)ModUtilities.GetKeyFromConfig(c, m, "ImpaleDepth");
-                impaleZDamper = (float)ModUtilities.GetKeyFromConfig(c, m, "ImpaleZDamper");
-                connectedBMass = (float)ModUtilities.GetKeyFromConfig(c, m, "ImpaledConnectedBodyMassScale");
-                impaleBreakForce = (float)ModUtilities.GetKeyFromConfig(c, m, "ImpaledBreakForce");
-                addForceToRigidbodyFactor = (float)ModUtilities.GetKeyFromConfig(c, m, "AddForceToRigidbodyFactor");
-
-                damageType = (float)ModUtilities.GetKeyFromConfig(c, m, "DamageType");
-                weaponType = (float)ModUtilities.GetKeyFromConfig(c, m, "WeaponType");
-                canRecall = (bool)ModUtilities.GetKeyFromConfig(c, m, "CanRecall");
-
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("UNABLE TO PARSE VALUE, ONE OR MORE MAY HAVE FAILED!\n" + e);
-            }
-        }
-
-        #region variables
-        public static MyCustomWeaponManager reff;
-        private GameObject weaponPrefab;
-        public string modelName = "", bundleName = "";
-        public bool canPary = true, canBeParried = true, stickOnDamage = false, hideHandOnGrab = true, isCurrentlyGrabbable = true, setPositionOnGrab = true, setRotationOnGrab = true, canAlsoCut = true, isDamaging = true, canRecall = true;
-        public float spawnChance = 25, impaleZDamper = 25, connectedBMass = 10, impaleBreakForce = 5000, scaleDamage = 1.2f, bonusVelocity = 0.7f, impaleDepth = 1, damageType = 1, weaponType = 1, addForceToRigidbodyFactor = 0.6f;
-        private int r = 0;
-        #endregion
-        #endregion
-    }
-
-    public class MjolnirHandle : WeaponHandle
-    {
-        static MjolnirHandle currentMjol;
-        Vector3 handPos;
-        Rigidbody rb;
-
-        protected void Start()
-        {
-            rb = GetComponent<Rigidbody>();
-        }
-
-        protected override void Update()
-        {
-            base.Update();
-
-            if ((InputReader.LeftGestureButtonPressDown || InputReader.RightGestureButtonPressDown) && weaponBase.wieldedByPlayer)
-            {
-                Debug.Log("Set the hammer to be: " + weaponBase.gameObject);
-                currentMjol = this;
-            }
-
-            if (InputReader.LeftGestureButtonPress && !BeingWielded)
-            {
-                Debug.Log("trying recall: " + currentMjol.weaponBase.gameObject);
-
-                if (currentMjol.Equals(this))
+                Console.WriteLine(bundle);
+                ModUtilities.GetBundleContent(obj =>
                 {
-                    handPos = GameController.Player.leftArmPos;
-                    currentMjol.rb.velocity = (handPos - rb.position) * 5;
+                    Console.WriteLine(obj);
+                    weaponPrefab = obj;
+                    weaponPrefab.AddComponent<MyWeaponSetUp>().SetUp(true);
 
-                }
-            }
+                    HarmonyInstance.Create("net.GornMods.Mjolnir").PatchAll();
+                }, bundle, "Mjolnir");
 
-            if (InputReader.RightGestureButtonPress && !BeingWielded)
-            {
-                Debug.Log("trying recall: " + currentMjol.weaponBase.gameObject);
 
-                if (currentMjol.Equals(this))
-                {
-                    handPos = GameController.Player.rightArmPos;
-                    currentMjol.rb.velocity = (handPos - rb.position) * 5;
+            }); //Loads specific bundle
+            Debug.Log(" has finished setting up...");
 
-                }
-            }
+            Console.WriteLine($"{ModInformation.Name} has loaded."); //The CMD window will pick up both Debug.Log and Console.WriteLine.
         }
 
+        public void OnUnload()
+        {
+            //This is called when mods are unloaded, destroy any instances you've created here.
+
+            Console.WriteLine($"{ModInformation.Name} has unloaded.");
+        }
+
+
+        public ModInformation ModInformation => new ModInformation
+        {
+            Name = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name, // CHANGE AT => Project>MyModTemplate Properties>Build>Assembly Name
+
+            Creator = "theCH33F",
+
+            Description = "Thors Hammer! Complete with Recall functionality. Use the gesture when holding to claim a hammer, then use gesture to recall.", //Explination of what mod does, e.g; Slows time down with magical powers!
+
+            Version = "V3.0.0" //Mod version, you can name your versions whatever, example; V1/Version One/VER1/AAAAAAAA1
+        };
     }
 
     public class MyWeaponSetUp : MonoBehaviour
@@ -240,7 +95,7 @@ namespace MyCustomWeapon
 
         GameObject handle, blade;
 
-        public void SetUp(WeaponChance weapon, bool canRecall)
+        public void SetUp(bool canRecall)
         {
             gameObject.AddComponent<WeaponBase>().type = WeaponType.ArmorBreaker;
 
@@ -271,28 +126,29 @@ namespace MyCustomWeapon
             }
 
             wb.grabbable = wh;
-            wb.canParry = weapon.canPary;
-            wb.canBeParried = weapon.canBeParried;
-            wb.addForceToRigidbodyFactor = weapon.addForceToRigidbodyFactor;
+            wb.canParry = true;
+            wb.canBeParried = true;
+            wb.addForceToRigidbodyFactor = 0.6f;
 
             wh.grabRigidbody = wh.GetComponent<Rigidbody>();
-            wh.hideHandModelOnGrab = weapon.hideHandOnGrab;
-            wh.isCurrentlyGrabbale = weapon.isCurrentlyGrabbable;
-            wh.setPositionOnGrab = weapon.setPositionOnGrab;
-            wh.setRotationOnGrab = weapon.setRotationOnGrab;
+            wh.hideHandModelOnGrab = true;
+            wh.isCurrentlyGrabbale = true;
+            wh.setPositionOnGrab = true;
+            wh.setRotationOnGrab = true;
 
             DamagerRigidbody drb = blade.AddComponent<DamagerRigidbody>();
 
-            drb.scaleDamage = weapon.scaleDamage;
-            drb.canAlsoCut = weapon.canAlsoCut;
-            drb.bonusVelocity = weapon.bonusVelocity;
-            drb.isDamaging = weapon.isDamaging;
-            drb.impaleDepth = weapon.impaleDepth;
-            drb.damageType = (DamageType)weapon.damageType;
+            drb.scaleDamage = 1.2f;
+            drb.canAlsoCut = false;
+            drb.bonusVelocity = 0.7f;
+            drb.isDamaging = true;
+            drb.impaleDepth = 1f;
+            drb.damageType = DamageType.Blunt;
 
             handle.AddComponent<FootStepSound>().soundEffectName = "WeaponDrop";
             handle.GetComponent<FootStepSound>().minVolumeToTrigger = 0.05f;
 
+            /*
             try
             {
                 if (transform.GetChild(2) != null)
@@ -308,32 +164,71 @@ namespace MyCustomWeapon
             {
                 return;
             }
+            */
 
             return;
         }
     }
+
+    public class MjolnirHandle : WeaponHandle
+    {
+        static MjolnirHandle currentMjol;
+        Vector3 handPos;
+        Rigidbody rb;
+
+        protected void Start()
+        {
+            rb = GetComponent<Rigidbody>();
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if ((InputReader.LeftGestureButtonPressDown || InputReader.RightGestureButtonPressDown) && weaponBase.wieldedByPlayer)
+            {
+                //Debug.Log("Set the hammer to be: " + weaponBase.gameObject);
+                currentMjol = this;
+            }
+
+            if (InputReader.LeftGestureButtonPress && !BeingWielded)
+            {
+                //Debug.Log("trying recall: " + currentMjol.weaponBase.gameObject);
+
+                if (currentMjol.Equals(this))
+                {
+                    handPos = GameController.Player.leftArmPos;
+                    currentMjol.rb.velocity = (handPos - rb.position) * 5;
+
+                }
+            }
+
+            if (InputReader.RightGestureButtonPress && !BeingWielded)
+            {
+                //Debug.Log("trying recall: " + currentMjol.weaponBase.gameObject);
+
+                if (currentMjol.Equals(this))
+                {
+                    handPos = GameController.Player.rightArmPos;
+                    currentMjol.rb.velocity = (handPos - rb.position) * 5;
+
+                }
+            }
+        }
+
+    }
+
+    [HarmonyPatch(typeof(GameController), "SetupLevel")]
+    public class Spawn_Weapon
+    {
+        public static void Postfix(GameController __instance)
+        {
+            Console.WriteLine("Spawning Mjolnir!");
+
+            UnityEngine.Object.Instantiate(MyModEntry.weaponPrefab, GameController.Player.position + new Vector3(0, 5, 5), GameController.Player.handLeft.transform.rotation);
+        }
+
+    }
 }
 
-#region Error help
-
-/*Q = Question
- *A = Answer
- *O = Optional
- *I = Additional Information
- * - - - - - - - - - - - - - 
- * -Q: It says I'm missing an assembly reference?-
- * ==============================================
- * A: View>Solution Explorer>References>Right-click>Add>Clear all(if any show up)(Right-click one and clear all)>Browse>Project root>Plugins>Select All.
- * 
- * -Q: My mod won't load!- 
- * ========================
- *  A: Did you remove Init()? If not, everything should work, it'll be your code, double check!
- *  I: I keep dlSpy(.dll deassembler) open so I can see the source to understand what I'm modifying.
- *  
- *  -Q: I accidentally broke the game, help!-
- *  =========================================
- *  A: Delete: GORN_Data>Managed>Assembly-CSharp.dll and the most recent mod you broke it with.
- *  O: Verify file integrity, launching the game will start this automatically.
- */
-
-#endregion
+    
